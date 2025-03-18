@@ -16,68 +16,8 @@ REJECT_ANGLE = 20
 BOX_WIDTH = 4
 TEXT_SIZE = 18
 FRAME_SKIP = 5
+st.set_page_config(page_title="Face Recognition System", layout="wide")
 
-
-# Custom CSS Styling
-st.markdown("""
-<style>
-    /* Main container styling */
-    .main {
-        background-color: #f8f9fa;
-    }
-    
-    /* Header styling */
-    .header {
-        color: #2c3e50;
-        padding: 1rem;
-        border-radius: 10px;
-        background: linear-gradient(145deg, #ffffff, #e6e6e6);
-        box-shadow: 5px 5px 15px #d9d9d9, -5px -5px 15px #ffffff;
-    }
-    
-    /* File uploader styling */
-    .stFileUploader > div > div {
-        border: 2px dashed #2c3e50;
-        border-radius: 15px;
-        background-color: rgba(44, 62, 80, 0.05);
-    }
-    
-    /* Button styling */
-    .stButton > button {
-        border: none;
-        border-radius: 8px;
-        background: linear-gradient(145deg, #2c3e50, #1a252f);
-        color: white;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    
-    /* Toggle button styling */
-    .toggle-btn {
-        border: 2px solid #2c3e50 !important;
-        background-color: transparent !important;
-        color: #2c3e50 !important;
-    }
-    
-    .toggle-btn.active {
-        background-color: #2c3e50 !important;
-        color: white !important;
-    }
-    
-    /* Card styling for sections */
-    .card {
-        padding: 2rem;
-        border-radius: 15px;
-        background: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin: 1rem 0;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 @st.cache_resource
 def load_models():
@@ -257,20 +197,30 @@ def process_video(uploaded_video):
     os.remove(temp_video)
     return processed_frames
 
-# Streamlit UI
-st.title('Enhanced Face Recognition System')
-st.markdown(f"""
-**Security Parameters**  
-- Recognition Threshold: {RECOGNITION_THRESHOLD}  
-- Minimum Face Confidence: {MIN_FACE_CONFIDENCE}  
-- Bounding Box Width: {BOX_WIDTH}px
-""")
+st.title('Face Recognition System')
+st.caption("Secure biometric identification with advanced machine learning")
 
+# Parameters Section
+with st.expander("SYSTEM PARAMETERS", expanded=True):
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.markdown("**Recognition Threshold**  \n`0.35`  \n*Lower values = stricter matching*")
+    with col2:
+        st.markdown("**Min Face Confidence**  \n`0.99`  \n*Detection quality threshold*")
+    with col3:
+        st.markdown("**Face Size**  \n`160×160`  \n*Standardized template size*")
+    with col4:
+        st.markdown("**Frame Skip**  \n`5`  \n*For video processing*")
+
+st.divider()
+
+# Recognition Interface
 st.subheader("Recognition Interface")
-input_type = st.radio("Select Input Type:", ("Image", "Video"))
+input_type = st.radio("Select Input Type:", ("Image", "Video"), horizontal=True)
 
 if input_type == "Image":
-    uploaded_file = st.file_uploader("Upload Image for Analysis", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("**Upload Image for Analysis**", type=["jpg", "jpeg", "png"], 
+                                   help="Upload a clear frontal face image for best results")
     if uploaded_file:
         image = Image.open(uploaded_file)
         processed_img, results = recognize_from_image(image)
@@ -282,45 +232,57 @@ if input_type == "Image":
             st.image(processed_img, caption='Analysis Results', use_container_width=True)
         
         if results:
-            st.subheader("Recognition Report:")
+            st.subheader("Recognition Report")
             for i, (box, name, confidence) in enumerate(results):
-                st.write(f"""
+                st.markdown(f"""
                 **Face {i+1}**  
-                - Identity: {name}  
-                - Confidence Score: {confidence:.4f}  
-                - Bounding Box: {box.tolist()}
+                Identity: `{name}`  
+                Confidence: `{confidence:.4f}`  
+                Bounding Box: `{box.tolist()}`
                 """)
         else:
             st.warning("No faces meeting quality standards detected")
 
 elif input_type == "Video":
-    uploaded_video = st.file_uploader("Upload Video for Analysis", type=["mp4", "avi", "mov"])
+    uploaded_video = st.file_uploader("**Upload Video for Analysis**", type=["mp4", "avi", "mov"])
     if uploaded_video:
-        st.info("Processing video... This may take some time depending on video length")
-        processed_frames = process_video(uploaded_video)
+        with st.status("Processing video...", expanded=True) as status:
+            st.write("Initializing video processing")
+            processed_frames = process_video(uploaded_video)
+            status.update(label="Processing complete!", state="complete", expanded=False)
         
         if processed_frames:
             st.success(f"Processed {len(processed_frames)} frames")
             st.subheader("Sample Processed Frames")
             
-            # Display first 5 processed frames
             cols = st.columns(3)
-            for idx, frame in enumerate(processed_frames[:5]):
+            for idx, frame in enumerate(processed_frames[:10]):
                 with cols[idx % 3]:
                     st.image(frame, caption=f"Frame {idx*FRAME_SKIP}", use_container_width=True)
             
-            # Option to download processed frames as video
-            if st.button("Export Processed Video"):
+            if st.button("Export Processed Video", help="Coming soon!"):
                 st.warning("Video export feature not implemented yet")
-        else:
-            st.error("No faces detected in the video")
+
+st.divider()
 
 # Enrollment System
 st.subheader("Biometric Enrollment")
 with st.form("enrollment_form"):
-    new_name = st.text_input("Full Name")
-    new_face_file = st.file_uploader("Upload High-Quality Face Image", type=["jpg", "jpeg", "png"])
-    submitted = st.form_submit_button("Enroll Identity")
+    cols = st.columns(2)
+    with cols[0]:
+        new_name = st.text_input("**Full Name**", placeholder="Enter name")
+    with cols[1]:
+        new_face_file = st.file_uploader("**Face Image**", type=["jpg", "jpeg", "png"], 
+                                       help="High-quality frontal face image")
+    
+    st.markdown("**Enrollment Requirements:**")
+    st.markdown("""
+    - Face must be clearly visible and well-lit
+    - Neutral expression, looking straight at camera
+    - No face coverings, glasses may affect recognition
+    """)
+    
+    submitted = st.form_submit_button("Enroll Identity", use_container_width=True)
     
     if submitted and new_name and new_face_file:
         face_image = Image.open(new_face_file)
@@ -337,7 +299,6 @@ with st.form("enrollment_form"):
                 embedding = get_embedding(standardized_face)
                 embeddings, names = load_embeddings()
                 
-                # Check against existing entries
                 distances = [cosine(embedding, e) for e in embeddings]
                 if any(d < 0.25 for d in distances):
                     st.error("Biometric Conflict: Similar face already enrolled")
@@ -348,31 +309,39 @@ with st.form("enrollment_form"):
                     st.success(f"Successfully Enrolled: {new_name}")
                     st.image(display_face, caption="Enrolled Face Template", width=200)
 
+st.divider()
+
 # Database Management
 st.subheader("Database Administration")
-if st.button("Initialize Database"):
-    try:
-        if os.path.exists(DB_FILE):
-            os.remove(DB_FILE)
-        save_embeddings([], [])
-        st.success("Database initialized successfully")
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
+cols = st.columns(2)
+with cols[0]:
+    if st.button("Initialize Database", help="WARNING: This will erase all data!"):
+        try:
+            if os.path.exists(DB_FILE):
+                os.remove(DB_FILE)
+            save_embeddings([], [])
+            st.success("Database initialized successfully")
+        except Exception as e:
+            st.error(f"Error: {str(e)}")
 
-if st.button("Show Database Analysis"):
-    embeddings, names = load_embeddings()
-    if names:
-        st.write("**Enrolled Identities:**")
-        unique_names = list(set(names))
-        for name in unique_names:
-            count = names.count(name)
-            st.write(f"- {name} (Entries: {count})")
-        
-        st.write("**Similarity Matrix:**")
-        similarity_matrix = np.zeros((len(embeddings), len(embeddings)))
-        for i in range(len(embeddings)):
-            for j in range(len(embeddings)):
-                similarity_matrix[i,j] = 1 - cosine(embeddings[i], embeddings[j])
-        st.dataframe(similarity_matrix)
-    else:
-        st.info("Database is empty")
+with cols[1]:
+    if st.button("Show Database Analysis"):
+        embeddings, names = load_embeddings()
+        if names:
+            st.subheader("Database Insights")
+            tab1, tab2 = st.tabs(["Enrolled Identities", "Similarity Matrix"])
+            
+            with tab1:
+                unique_names = list(set(names))
+                for name in unique_names:
+                    count = names.count(name)
+                    st.markdown(f"- **{name}** (Entries: `{count}`)")
+            
+            with tab2:
+                similarity_matrix = np.zeros((len(embeddings), len(embeddings)))
+                for i in range(len(embeddings)):
+                    for j in range(len(embeddings)):
+                        similarity_matrix[i,j] = 1 - cosine(embeddings[i], embeddings[j])
+                st.dataframe(similarity_matrix, use_container_width=True)
+        else:
+            st.info("Database is empty")
