@@ -1,0 +1,8 @@
+streamlit>=1.29.0
+pillow>=10.1.0
+facenet-pytorch>=2.5.3
+torch==2.2.1
+torchvision==0.17.1
+torchaudio==2.2.1  # Add this line
+scipy>=1.11.3
+numpy==1.26.4
